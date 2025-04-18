@@ -1,3 +1,7 @@
+// At the beginning of your code, enhance your device detection
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+const isLowPowerDevice = isMobile || /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 // Function to toggle light helpers visibility
 function toggleLightHelpers() {
   if (lightHelpers.length === 0) {
@@ -62,9 +66,6 @@ const moveSpeed = 0.1;
 const gravity = 0.01;
 const jumpForce = 0.25;
 let isOnGround = false;
-
-// Detect if on mobile device
-const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
 // Object to store loaded models
 let models = {};
@@ -432,13 +433,19 @@ function addLighting() {
   lightHelpers = [];
   
   // Ambient light
-  const ambientLight = new THREE.AmbientLight(0xf7c6a1, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xf7c6a1, isLowPowerDevice ? 0.8 : 0.5);
   scene.add(ambientLight);
 
   // Directional light
-  const directionalLight = new THREE.DirectionalLight(0xa1cff7, 10);
+  const directionalLight = new THREE.DirectionalLight(0xa1cff7, isLowPowerDevice ? 8 : 10);
   directionalLight.position.set(0, 10, 0);
   scene.add(directionalLight);
+
+   // Skip additional lights on low-power devices
+   if (isLowPowerDevice) {
+    console.log("Using simplified lighting for mobile device");
+    return;
+  }
   
   // Add directional light helper
   const directionalHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
@@ -598,6 +605,11 @@ function addLighting() {
 
 // Function to add lights to all interactive artworks
 function addArtworkLights(artworksData) {
+  // Skip artwork lights entirely on mobile
+  if (isLowPowerDevice) {
+    console.log("Skipping artwork lights on mobile device");
+    return;
+  }
   // Check if artworksData is defined, otherwise use the global artworks array
   const artworkItems = artworksData || artworks;
   
@@ -1281,12 +1293,13 @@ function animate(time) {
 
   requestAnimationFrame(animate);
   updatePlayerMovement();
-  animateGrass(time);
 
-  // Update wind materials
-  windMaterials.forEach(material => {
-    material.uniforms.u_windTime.value += material.uniforms.u_windSpeed.value * deltaTime;
-  });
+  if (!isLowPowerDevice) {
+    // Wind animations
+    animateGrass(time);
+    windMaterials.forEach(material => {
+      material.uniforms.u_windTime.value += material.uniforms.u_windSpeed.value * deltaTime;
+    });
 
   // Update tree animations
   fluffyTrees.forEach(tree => tree.update(deltaTime));
@@ -1345,6 +1358,13 @@ function animate(time) {
         helper.update();
       }
     });
+
+  } else {
+    // For mobile, update trees with reduced frequency
+    if (time % 3 === 0) { // Only update every 3rd frame
+      fluffyTrees.forEach(tree => tree.update(deltaTime));
+    }
+  }
   
   // Audio visualization
   if (particleSystem && analyser) {
