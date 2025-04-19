@@ -3,7 +3,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 const isLowPowerDevice = isMobile || /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 // Function to toggle light helpers visibility
-function toggleLightHelpers() {
+/* function toggleLightHelpers() {
   if (lightHelpers.length === 0) {
     console.log("No light helpers to toggle");
     return;
@@ -25,7 +25,8 @@ function toggleLightHelpers() {
   });
   
   console.log(`Light helpers ${newState ? 'shown' : 'hidden'}`);
-}import '../style.css'
+} */
+import '../style.css'
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ColorManagement, SRGBColorSpace, ACESFilmicToneMapping } from 'three';
@@ -46,7 +47,7 @@ let windMaterials = [];
 let flowerParts = [];
 let interactiveModels = []; // Store interactive models
 let raycaster; // For detecting clicks on models
-let lightHelpers = []; // Store light helpers
+//let lightHelpers = []; // Store light helpers
 
 // Performance optimization: Create reusable vectors outside functions
 const cameraDirection = new THREE.Vector3();
@@ -130,9 +131,6 @@ window.addEventListener("load", init);
 
 // Function to load fluffy trees
 async function loadFluffyTrees() {
-  console.log("========================");
-  console.log("LOADING IMPROVED FLUFFY TREES");
-  console.log("========================");
   
   // Clear any existing fluffy trees
   fluffyTrees = [];
@@ -425,19 +423,19 @@ function setupScene() {
 
 function addLighting() {
   // Clear any existing light helpers
-  lightHelpers.forEach(helper => {
+/*   lightHelpers.forEach(helper => {
     if (helper.parent) {
       helper.parent.remove(helper);
     }
-  });
-  lightHelpers = [];
+  }); */
+  //lightHelpers = [];
   
   // Ambient light
-  const ambientLight = new THREE.AmbientLight(0xf7c6a1, isLowPowerDevice ? 0.8 : 1.4);
+  const ambientLight = new THREE.AmbientLight(0x92728e, isLowPowerDevice ? 15 : 2);
   scene.add(ambientLight);
 
   // Directional light
-  const directionalLight = new THREE.DirectionalLight(0xa1cff7, isLowPowerDevice ? 8 : 14);
+  const directionalLight = new THREE.DirectionalLight(0xa1cff7, isLowPowerDevice ? 10 : 8);
   directionalLight.position.set(0, 10, 0);
   scene.add(directionalLight);
 
@@ -447,92 +445,12 @@ function addLighting() {
     return;
   }
   
-  // Add directional light helper
+/*   // Add directional light helper
   const directionalHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
   scene.add(directionalHelper);
-  lightHelpers.push(directionalHelper);
+  lightHelpers.push(directionalHelper); */
 
-  /* // Create spotlight 1
-  const spotLight = new THREE.SpotLight(0xffffff, 600);
-  spotLight.position.set(-11.0, 33, 0);
-  spotLight.angle = Math.PI / 7;
-  spotLight.penumbra = 0.2;
-  spotLight.decay = 1;
-  spotLight.distance = 50;
   
-  spotLight.target.position.set(-12.4, 0, 0);
-  
-  spotLight.castShadow = true;
-  spotLight.shadow.mapSize.width = 1024;
-  spotLight.shadow.mapSize.height = 1024;
-  spotLight.shadow.bias = -0.001;
-  spotLight.shadow.normalBias = 0.02;
-  spotLight.shadow.camera.near = 1;
-  spotLight.shadow.camera.far = 100;
-  spotLight.shadow.camera.fov = 30;
-  
-  scene.add(spotLight);
-  scene.add(spotLight.target);
-  
-  // Add spotlight helper
-  const spotLightHelper = new THREE.SpotLightHelper(spotLight);
-  scene.add(spotLightHelper);
-  lightHelpers.push(spotLightHelper);
-  
-  // Create spotlight 2
-  const spotLight2 = new THREE.SpotLight(0xffffff, 600);
-  spotLight2.position.set(-11.0, 31, 25);
-  spotLight2.angle = Math.PI / 7;
-  spotLight2.penumbra = 0.2;
-  spotLight2.decay = 1;
-  spotLight2.distance = 50;
-  
-  spotLight2.target.position.set(-12.4, 0, 25);
-  
-  spotLight2.castShadow = true;
-  spotLight2.shadow.mapSize.width = 1024;
-  spotLight2.shadow.mapSize.height = 1024;
-  spotLight2.shadow.bias = -0.001;
-  spotLight2.shadow.normalBias = 0.02;
-  spotLight2.shadow.camera.near = 1;
-  spotLight2.shadow.camera.far = 100;
-  spotLight2.shadow.camera.fov = 30;
-  
-  scene.add(spotLight2);
-  scene.add(spotLight2.target);
-  
-  // Add spotlight helper
-  const spotLight2Helper = new THREE.SpotLightHelper(spotLight2);
-  scene.add(spotLight2Helper);
-  lightHelpers.push(spotLight2Helper);
-  
-  // Create spotlight 3
-  const spotLight3 = new THREE.SpotLight(0xffffff, 600);
-  spotLight3.position.set(-11.0, 31, -25);
-  spotLight3.angle = Math.PI / 7;
-  spotLight3.penumbra = 0.2;
-  spotLight3.decay = 1;
-  spotLight3.distance = 50;
-  
-  spotLight3.target.position.set(-12.4, 0, -25);
-  
-  spotLight3.castShadow = true;
-  spotLight3.shadow.mapSize.width = 1024;
-  spotLight3.shadow.mapSize.height = 1024;
-  spotLight3.shadow.bias = -0.001;
-  spotLight3.shadow.normalBias = 0.02;
-  spotLight3.shadow.camera.near = 1;
-  spotLight3.shadow.camera.far = 100;
-  spotLight3.shadow.camera.fov = 30;
-  
-  scene.add(spotLight3);
-  scene.add(spotLight3.target);
-  
-  // Add spotlight helper
-  const spotLight3Helper = new THREE.SpotLightHelper(spotLight3);
-  scene.add(spotLight3Helper);
-  lightHelpers.push(spotLight3Helper); 
-  */
 
   // Point lights (original array for color cycling)
   const positions = [
@@ -549,25 +467,15 @@ function addLighting() {
     pointLights.push(light);
     hues.push(Math.random()); // optional: gives each light a different starting color
     
-    // Add point light helper
+/*     // Add point light helper
     const pointLightHelper = new THREE.PointLightHelper(light, 1);
     scene.add(pointLightHelper);
-    lightHelpers.push(pointLightHelper);
+    lightHelpers.push(pointLightHelper); */
   });
   
-  // NEW: Add standalone point lights (not part of the color cycling array)
-  // Method 1: Static colored light
-  /* const staticLight = new THREE.PointLight(0x00ffff, 250, 40, 2); // Cyan light
-  staticLight.position.set(20, 5, 15);
-  scene.add(staticLight);
-  
-  // Add helper for static light
-  const staticLightHelper = new THREE.PointLightHelper(staticLight, 1);
-  scene.add(staticLightHelper);
-  lightHelpers.push(staticLightHelper); */
-  
+    
   // Method 2: Custom cycling light with its own parameters
-  const customLight = new THREE.PointLight(0xff00ff, 200, 60, 2); // Start with magenta
+  const customLight = new THREE.PointLight(0xff00ff, 300, 60, 2); // Start with magenta
   customLight.position.set(-26, 8, -13);
   customLight.userData = {
     cycleSpeed: 0.002, // Faster color cycling
@@ -579,28 +487,10 @@ function addLighting() {
   window.customLights = window.customLights || [];
   window.customLights.push(customLight);
   
-  // Add helper for custom light
+/*   // Add helper for custom light
   const customLightHelper = new THREE.PointLightHelper(customLight, 1);
   scene.add(customLightHelper);
-  lightHelpers.push(customLightHelper);
-  
-  // Method 3: Blinking light
-  /* const blinkingLight = new THREE.PointLight(0xffaa00, 150, 30, 2); // Orange light
-  blinkingLight.position.set(0, 1, 0);
-  blinkingLight.userData = {
-    blinkSpeed: 2.0, // Blinks per second
-    minIntensity: 50,
-    maxIntensity: 300,
-    originalIntensity: 150
-  };
-  scene.add(blinkingLight);
-  window.blinkingLights = window.blinkingLights || [];
-  window.blinkingLights.push(blinkingLight);
-  
-  // Add helper for blinking light
-  const blinkingLightHelper = new THREE.PointLightHelper(blinkingLight, 1);
-  scene.add(blinkingLightHelper);
-  lightHelpers.push(blinkingLightHelper); */
+  lightHelpers.push(customLightHelper); */
     
 }
 
@@ -654,15 +544,15 @@ function addArtworkLights(artworksData) {
       // Add the light to the scene
       scene.add(artworkLight);
       
-      // Create helper for this light
+/*       // Create helper for this light
       const artworkLightHelper = new THREE.PointLightHelper(artworkLight, 1);
       scene.add(artworkLightHelper);
-      lightHelpers.push(artworkLightHelper);
+      lightHelpers.push(artworkLightHelper); */
       
       // Store reference to both light and helper
       window.artworkLights.push({
         light: artworkLight,
-        helper: artworkLightHelper,
+        //helper: artworkLightHelper,
         artworkIndex: index
       });
       
@@ -674,10 +564,10 @@ function addArtworkLights(artworksData) {
     console.log("No artwork data available for lights");
   }
   
-  // Hide all helpers initially
+/*   // Hide all helpers initially
   lightHelpers.forEach(helper => {
     helper.visible = false;
-  });
+  }); */
 }
 
 // Function to update artwork lights with proper rotation handling
@@ -745,9 +635,9 @@ function updateArtworkLights(time) {
         }
         
         // Update helper position
-        if (item.helper && item.helper.update) {
+       /*  if (item.helper && item.helper.update) {
           item.helper.update();
-        }
+        } */
       }
     });
   }
@@ -897,10 +787,10 @@ function onKeyDown(event) {
         isOnGround = false;
       }
       break;
-    case "KeyT": toggleNavmeshVisibility(); break;
+    //case "KeyT": toggleNavmeshVisibility(); break;
     case "KeyM": toggleAudio(); break;
     case "KeyP": logPlayerPosition(); break; // Add P key to log position
-    case "KeyL": toggleLightHelpers(); break; // Add L key to toggle light helpers
+    //case "KeyL": toggleLightHelpers(); break; // Add L key to toggle light helpers
   }
 }
 
@@ -1353,12 +1243,12 @@ function animate(time) {
   // Update artwork tracking lights
   updateArtworkLights(time);
 
-    // Update light helpers
+/*     // Update light helpers
     lightHelpers.forEach(helper => {
       if (helper.update) {
         helper.update();
       }
-    });
+    }); */
 
   } else {
     // For mobile, update trees with reduced frequency
@@ -1652,11 +1542,11 @@ function cleanup() {
   });
   interactiveModels = [];
 
-    // Clean up light helpers
+/*     // Clean up light helpers
     lightHelpers.forEach(helper => {
       scene.remove(helper);
     });
-    lightHelpers = [];
+    lightHelpers = []; */
   
   // Clean up additional light references
   window.customLights = [];
