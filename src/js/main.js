@@ -433,11 +433,11 @@ function addLighting() {
   lightHelpers = [];
   
   // Ambient light
-  const ambientLight = new THREE.AmbientLight(0xf7c6a1, isLowPowerDevice ? 0.8 : 0.5);
+  const ambientLight = new THREE.AmbientLight(0xf7c6a1, isLowPowerDevice ? 0.8 : 1.4);
   scene.add(ambientLight);
 
   // Directional light
-  const directionalLight = new THREE.DirectionalLight(0xa1cff7, isLowPowerDevice ? 8 : 10);
+  const directionalLight = new THREE.DirectionalLight(0xa1cff7, isLowPowerDevice ? 8 : 14);
   directionalLight.position.set(0, 10, 0);
   scene.add(directionalLight);
 
@@ -1548,14 +1548,14 @@ function loadModels() {
               // Enhance materials to work with environment lighting
               if (node.material) {
                 if (node.material.isMeshStandardMaterial) {
-                  node.material.envMapIntensity = 0.7;
+                  node.material.envMapIntensity = 1;
                   node.material.roughness = Math.max(0.2, node.material.roughness);
                   node.material.metalness = Math.min(0.8, node.material.metalness);
                   node.material.needsUpdate = true;
                 } else if (Array.isArray(node.material)) {
                   node.material.forEach((material) => {
                     if (material.isMeshStandardMaterial) {
-                      material.envMapIntensity = 0.7;
+                      material.envMapIntensity = 1;
                       material.roughness = Math.max(0.2, material.roughness);
                       material.metalness = Math.min(0.8, material.metalness);
                     }
