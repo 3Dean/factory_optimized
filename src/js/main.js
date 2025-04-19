@@ -452,7 +452,7 @@ function addLighting() {
   scene.add(directionalHelper);
   lightHelpers.push(directionalHelper);
 
-  // Create spotlight 1
+  /* // Create spotlight 1
   const spotLight = new THREE.SpotLight(0xffffff, 600);
   spotLight.position.set(-11.0, 33, 0);
   spotLight.angle = Math.PI / 7;
@@ -531,7 +531,8 @@ function addLighting() {
   // Add spotlight helper
   const spotLight3Helper = new THREE.SpotLightHelper(spotLight3);
   scene.add(spotLight3Helper);
-  lightHelpers.push(spotLight3Helper);
+  lightHelpers.push(spotLight3Helper); 
+  */
 
   // Point lights (original array for color cycling)
   const positions = [
