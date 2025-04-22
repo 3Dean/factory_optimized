@@ -1275,9 +1275,9 @@ function animate(time) {
                 "Opacity:", particleSystem.material.opacity.toFixed(2));
     }
 
-    particleSystem.material.size = .5 + pulse * 1;
+    particleSystem.material.size = .5 + pulse * 1.5;
     particleSystem.material.opacity = .5 + pulse * 0.4;
-    particleSystem.material.color.setHSL(pulse, 1.0, 1.0);
+    particleSystem.material.color.setHSL(pulse, 1.0, 2.0);
 
     particleSystem.rotation.y += 0.0005 + pulse * 0.003;
     particleSystem.position.y = Math.sin(performance.now() * 0.001) * (0.5 + pulse * 0.5);
