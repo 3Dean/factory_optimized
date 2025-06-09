@@ -268,7 +268,7 @@ const artworks = [
     position: new THREE.Vector3(-16.52, 5.5, -28.3),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, -Math.PI / 2, 0),
-    linkUrl: "https://example.com/artwork1", // URL to open when clicked
+    linkUrl: "https://main.d1dejm6fbp1yzl.amplifyapp.com/", // URL to open when clicked
   }
 ];
 
