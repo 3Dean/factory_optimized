@@ -49,6 +49,12 @@ let interactiveModels = []; // Store interactive models
 let raycaster; // For detecting clicks on models
 //let lightHelpers = []; // Store light helpers
 
+// SOMA FM Radio variables
+let somaFmAudioElement;
+let somaFmSound;
+let somaFmIsPlaying = false;
+let somaFmControlsContainer;
+
 // Performance optimization: Create reusable vectors outside functions
 const cameraDirection = new THREE.Vector3();
 const cameraRight = new THREE.Vector3();
@@ -67,6 +73,20 @@ const moveSpeed = 0.1;
 const gravity = 0.01;
 const jumpForce = 0.25;
 let isOnGround = false;
+
+// SOMA FM Stations
+const somaStations = [
+  { name: 'Groove Salad (Chill)', stream: 'https://ice4.somafm.com/groovesalad-128-mp3', info: 'https://api.somafm.com/channels/groovesalad.json', mood: 'chill' },
+  { name: 'Secret Agent (Jazz)', stream: 'https://ice6.somafm.com/secretagent-128-mp3', info: 'https://api.somafm.com/channels/secretagent.json', mood: 'jazz' },
+  { name: 'Metal Detector (Metal)', stream: 'https://ice1.somafm.com/metal-128-mp3', info: 'https://api.somafm.com/channels/metal.json', mood: 'metal' },
+  { name: 'Drone Zone', stream: 'https://ice1.somafm.com/dronezone-128-mp3', info: 'https://api.somafm.com/channels/dronezone.json', mood: 'drone' },
+  { name: 'DEF CON Radio', stream: 'https://ice4.somafm.com/defcon-128-mp3', info: 'https://api.somafm.com/channels/defcon.json', mood: 'defcon' },
+  { name: 'Beat Blender', stream: 'https://ice2.somafm.com/beatblender-128-mp3', info: 'https://api.somafm.com/channels/beatblender.json', mood: 'beat' },
+  { name: 'Doomed (Dark)', stream: 'https://ice6.somafm.com/doomed-128-mp3', info: 'https://api.somafm.com/channels/doomed.json', mood: 'dark' },
+  { name: 'Dub Step Beyond', stream: 'https://ice2.somafm.com/dubstep-128-mp3', info: 'https://api.somafm.com/channels/dubstep.json', mood: 'dubstep' },
+  { name: 'Indie Pop Rocks', stream: 'https://ice1.somafm.com/indiepop-128-mp3', info: 'https://api.somafm.com/channels/indiepop.json', mood: 'indie' },
+  { name: 'Mission Control', stream: 'https://ice6.somafm.com/missioncontrol-128-mp3', info: 'https://api.somafm.com/channels/missioncontrol.json', mood: 'space' }
+];
 
 // Object to store loaded models
 let models = {};
@@ -276,15 +296,9 @@ const artworks = [
 function init() {
   // Initialize audio system
   setupAudio();
-
-  // Audio control elements
-  const playPauseButton = document.getElementById("play-pause");
-  const volumeSlider = document.getElementById("volume-slider");
-  const volumeLabel = document.getElementById("volume-label");
-
-  // Add event listeners for audio controls
-  playPauseButton.addEventListener("click", toggleAudio);
-  volumeSlider.addEventListener("input", updateVolume);
+  
+  // Initialize SOMA FM radio
+  setupSomaFmRadio();
 
   // Initialize raycaster for interactive models
   raycaster = new THREE.Raycaster();
@@ -319,9 +333,22 @@ function setupAudio() {
   window.addEventListener("touchstart", initializeAudioContext, { once: true });
   window.addEventListener("click", initializeAudioContext, { once: true });
   
+  // Create a THREE.AudioListener for 3D audio
+  if (!window.audioListener) {
+    window.audioListener = new THREE.AudioListener();
+    // We'll add this to the camera once it's created
+  }
+  
   // Pre-load the audio file
   const audioUrl = "assets/audio/IliaqueNebula.mp3";
   console.log("Preloading audio from:", audioUrl);
+  
+  // Create an audio element for direct playback as fallback
+  window.audioElement = new Audio(audioUrl);
+  window.audioElement.loop = true;
+  window.audioElement.preload = "auto";
+  
+  // Also fetch as ArrayBuffer for WebAudio API
   fetch(audioUrl)
     .then((response) => response.arrayBuffer())
     .then((arrayBuffer) => {
@@ -336,11 +363,15 @@ function setupAudio() {
 function initializeAudioContext() {
   if (audioInitialized) return;
   try {
+    // Create audio context
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Create gain node for volume control
     gainNode = audioContext.createGain();
-    const volumeSlider = document.getElementById("volume-slider");
-    gainNode.gain.value = volumeSlider.value / 100;
+    gainNode.gain.value = 0.7; // Default gain value
     gainNode.connect(audioContext.destination);
+    
+    // Create analyzer for visualizations
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 256; // Smaller = faster but less detailed
     const bufferLength = analyser.frequencyBinCount;
@@ -350,14 +381,24 @@ function initializeAudioContext() {
     gainNode.connect(analyser);
     analyser.connect(audioContext.destination);
 
+    // Add listener to camera when it's available
+    if (camera && window.audioListener) {
+      camera.add(window.audioListener);
+    }
+
+    // Try to decode audio buffer if available
     if (audioBuffer) {
       audioContext.decodeAudioData(audioBuffer)
         .then((decodedData) => {
           audioBuffer = decodedData;
-          console.log("Audio ready to play");
+          console.log("Audio successfully decoded and ready to play");
         })
-        .catch((err) => console.error("Error decoding audio data", err));
+        .catch((err) => {
+          console.error("Error decoding audio data", err);
+          // We'll use the audio element as fallback
+        });
     }
+    
     audioInitialized = true;
     console.log("Audio context initialized");
   } catch (e) {
@@ -366,36 +407,429 @@ function initializeAudioContext() {
 }
 
 function toggleAudio() {
-  if (!audioInitialized || !audioBuffer) {
-    console.log("Audio not yet initialized or loaded");
-    return;
+  if (!audioInitialized) {
+    initializeAudioContext();
+    if (!audioInitialized) {
+      console.log("Failed to initialize audio");
+      return;
+    }
   }
+  
+  // If SOMA FM is playing, pause it first
+  if (somaFmIsPlaying) {
+    somaFmAudioElement.pause();
+    somaFmIsPlaying = false;
+    const somaFmButton = somaFmControlsContainer.querySelector('button');
+    if (somaFmButton) {
+      somaFmButton.textContent = 'Play SOMA FM';
+      somaFmButton.style.backgroundColor = '#9e552f';
+    }
+  }
+  
   if (audioIsPlaying) {
+    // Stop currently playing audio
     if (audioSource) {
-      audioSource.stop();
+      try {
+        audioSource.stop();
+      } catch (e) {
+        console.log("Error stopping audio source:", e);
+      }
       audioSource = null;
     }
+    
+    // If using HTML Audio element as fallback
+    if (window.audioElement && !window.audioElement.paused) {
+      window.audioElement.pause();
+    }
+    
     audioIsPlaying = false;
-    document.getElementById("play-pause").textContent = "Play Music";
+    console.log("Audio playback stopped");
   } else {
-    audioSource = audioContext.createBufferSource();
-    audioSource.buffer = audioBuffer;
-    audioSource.loop = true;
-    audioSource.connect(gainNode);
-    audioSource.start(0);
-    audioIsPlaying = true;
-    document.getElementById("play-pause").textContent = "Pause Music";
+    // Try to play audio
+    try {
+      // First check if we have a properly decoded buffer
+      if (audioBuffer && audioBuffer instanceof AudioBuffer) {
+        console.log("Using decoded audio buffer");
+        
+        // Create and connect audio source
+        audioSource = audioContext.createBufferSource();
+        audioSource.buffer = audioBuffer;
+        audioSource.loop = true;
+        audioSource.connect(gainNode);
+        
+        // Start playback
+        audioSource.start(0);
+        audioIsPlaying = true;
+      } else {
+        // Use HTML Audio element as fallback
+        console.log("Using HTML Audio element as fallback");
+        
+        // Make sure we have the audio element
+        if (!window.audioElement) {
+          window.audioElement = new Audio("assets/audio/IliaqueNebula.mp3");
+          window.audioElement.loop = true;
+        }
+        
+        // Set volume
+        window.audioElement.volume = gainNode ? gainNode.gain.value : 0.7;
+        
+        // Connect to analyzer if possible
+        if (window.audioListener && camera) {
+          // Make sure listener is added to camera
+          if (!camera.children.includes(window.audioListener)) {
+            camera.add(window.audioListener);
+          }
+          
+          // Create a THREE.Audio object for the HTML element
+          const sound = new THREE.Audio(window.audioListener);
+          
+          // Connect the HTML audio element to the THREE.Audio object
+          sound.setMediaElementSource(window.audioElement);
+          
+          // Connect to gain node if available
+          if (gainNode) {
+            sound.connect(gainNode);
+          }
+        }
+        
+        // Play the audio
+        window.audioElement.play()
+          .then(() => {
+            console.log("Audio playback started successfully");
+            audioIsPlaying = true;
+          })
+          .catch(error => {
+            console.error("Error playing audio:", error);
+          });
+      }
+    } catch (error) {
+      console.error("Error in audio playback:", error);
+    }
   }
 }
 
-function updateVolume() {
-  const volumeSlider = document.getElementById("volume-slider");
-  const volumeLabel = document.getElementById("volume-label");
-  const volumeValue = volumeSlider.value;
-  volumeLabel.textContent = `Volume: ${volumeValue}%`;
+// This function is no longer used since we removed the volume slider from the HTML
+function updateVolume(value) {
   if (gainNode) {
-    gainNode.gain.value = volumeValue / 100;
+    gainNode.gain.value = value / 100;
   }
+}
+
+// Setup SOMA FM radio player
+function setupSomaFmRadio() {
+  // Initialize audio context if not already done
+  if (!audioInitialized) {
+    initializeAudioContext();
+  }
+  
+  // Create a container for audio controls
+  somaFmControlsContainer = document.createElement('div');
+  somaFmControlsContainer.style.position = 'fixed';
+  somaFmControlsContainer.style.bottom = '20px';
+  somaFmControlsContainer.style.left = '20px';
+  somaFmControlsContainer.style.zIndex = '1000';
+  somaFmControlsContainer.style.display = 'flex';
+  somaFmControlsContainer.style.alignItems = 'center';
+  somaFmControlsContainer.style.gap = '10px';
+  document.body.appendChild(somaFmControlsContainer);
+
+  // Create play button
+  const playButton = document.createElement('button');
+  playButton.textContent = 'Play SOMA FM';
+  playButton.style.padding = '8px 16px';
+  playButton.style.backgroundColor = '#9e552f';
+  playButton.style.color = 'white';
+  playButton.style.border = 'none';
+  playButton.style.borderRadius = '4px';
+  playButton.style.cursor = 'pointer';
+  playButton.style.fontSize = '14px';
+  somaFmControlsContainer.appendChild(playButton);
+
+  // Dropdown to select station
+  const stationSelect = document.createElement('select');
+  stationSelect.style.padding = '6px';
+  stationSelect.style.borderRadius = '4px';
+  stationSelect.style.cursor = 'pointer';
+  stationSelect.style.fontSize = '12px';
+  stationSelect.style.backgroundColor = '#333';
+  stationSelect.style.color = '#fff';
+
+  somaStations.forEach((station, index) => {
+    const option = document.createElement('option');
+    option.value = index.toString();
+    option.textContent = station.name;
+    stationSelect.appendChild(option);
+  });
+  somaFmControlsContainer.appendChild(stationSelect);
+
+  // Create volume slider
+  const volumeSlider = document.createElement('input');
+  volumeSlider.type = 'range';
+  volumeSlider.min = '0';
+  volumeSlider.max = '1';
+  volumeSlider.step = '0.1';
+  volumeSlider.value = '0.5';
+  volumeSlider.style.width = '100px';
+  volumeSlider.style.cursor = 'pointer';
+  volumeSlider.style.pointerEvents = 'auto';
+  volumeSlider.id = 'soma-volume-slider';
+  volumeSlider.style.webkitAppearance = 'none';
+  volumeSlider.style.appearance = 'none';
+  volumeSlider.style.height = '8px';
+  volumeSlider.style.borderRadius = '4px';
+  volumeSlider.style.background = '#444';
+  volumeSlider.style.outline = 'none';
+  somaFmControlsContainer.appendChild(volumeSlider);
+
+  // Create HTML audio element for streaming
+  somaFmAudioElement = document.createElement('audio');
+  somaFmAudioElement.style.display = 'none';
+  document.body.appendChild(somaFmAudioElement);
+
+  // Set initial stream URL
+  let selectedStationIndex = 0;
+  somaFmAudioElement.src = somaStations[selectedStationIndex].stream;
+  somaFmAudioElement.crossOrigin = 'anonymous';
+  somaFmAudioElement.preload = 'none';
+
+  // Add loading indicator CSS
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Play/pause button event listener
+  playButton.addEventListener('click', function() {
+    // Make sure audio context is initialized and resumed
+    if (!audioInitialized) {
+      initializeAudioContext();
+    }
+    
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().catch(e => console.error("Error resuming audio context:", e));
+    }
+    
+    if (!somaFmIsPlaying) {
+      // If regular audio is playing, pause it first
+      if (audioIsPlaying) {
+        if (audioSource) {
+          try {
+            audioSource.stop();
+          } catch (e) {
+            console.log("Error stopping audio source:", e);
+          }
+          audioSource = null;
+        }
+        
+        if (window.audioElement && !window.audioElement.paused) {
+          window.audioElement.pause();
+        }
+        
+        audioIsPlaying = false;
+        const playButton = document.getElementById("play-pause");
+        if (playButton) {
+          playButton.textContent = "Play Music";
+        }
+      }
+      
+      // Show loading state
+      playButton.textContent = 'Loading...';
+      playButton.disabled = true;
+      playButton.style.backgroundColor = '#6c757d';
+      
+      // Add loading indicator
+      const loadingIndicator = document.createElement('span');
+      loadingIndicator.textContent = ' ⟳';
+      loadingIndicator.style.display = 'inline-block';
+      loadingIndicator.style.animation = 'spin 1s linear infinite';
+      playButton.appendChild(loadingIndicator);
+      
+      // Start loading the audio
+      somaFmAudioElement.load();
+      
+      // Play when ready
+      somaFmAudioElement.play().then(() => {
+        somaFmIsPlaying = true;
+        playButton.textContent = 'Pause SOMA FM';
+        playButton.disabled = false;
+        playButton.style.backgroundColor = '#dc3545'; // Red for pause
+        
+        // Connect to audio analyzer if possible
+        try {
+          // Ensure audio context is running
+          if (audioContext.state !== 'running') {
+            audioContext.resume().then(() => {
+              console.log("Audio context resumed successfully");
+            }).catch(err => {
+              console.error("Failed to resume audio context:", err);
+            });
+          }
+          
+          // Create a media element source from the audio element
+          const mediaSource = audioContext.createMediaElementSource(somaFmAudioElement);
+          
+          // Create analyzer for visualizations if it doesn't exist
+          if (!analyser) {
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.8; // Add smoothing for more fluid visualization
+          }
+          
+          // Disconnect any existing connections to avoid feedback loops
+          try {
+            if (somaFmSound) {
+              somaFmSound.disconnect();
+            }
+          } catch (e) {
+            // Ignore disconnect errors
+          }
+          
+          if (gainNode) {
+            try {
+              gainNode.disconnect();
+            } catch (e) {
+              // Ignore disconnect errors
+            }
+          }
+          
+          // Connect the audio chain properly
+          mediaSource.connect(gainNode);
+          gainNode.connect(analyser);
+          gainNode.connect(audioContext.destination);
+          
+          // Create data array for analyzer
+          audioDataArray = new Uint8Array(analyser.frequencyBinCount);
+          
+          // Log success and debug info
+          console.log("SOMA FM audio connected successfully");
+          console.log("Audio context state:", audioContext.state);
+          console.log("Analyzer frequency bin count:", analyser.frequencyBinCount);
+          console.log("Gain node value:", gainNode.gain.value);
+          
+          // Force a test of the analyzer to verify it's working
+          analyser.getByteFrequencyData(audioDataArray);
+          let sum = 0;
+          for (let i = 0; i < audioDataArray.length; i++) {
+            sum += audioDataArray[i];
+          }
+          console.log("Initial audio data sum:", sum);
+          
+        } catch (error) {
+          console.error("Error connecting SOMA FM audio:", error);
+          // Fallback to THREE.js audio if Web Audio API fails
+          try {
+            // Make sure we have an audio listener
+            if (!window.audioListener) {
+              window.audioListener = new THREE.AudioListener();
+              if (camera) {
+                camera.add(window.audioListener);
+              }
+            }
+            
+            // Create a THREE.Audio object for the SOMA FM stream
+            if (!somaFmSound) {
+              somaFmSound = new THREE.Audio(window.audioListener);
+              somaFmSound.setMediaElementSource(somaFmAudioElement);
+            }
+            
+            // Create analyzer for visualizations if it doesn't exist
+            if (!analyser) {
+              analyser = audioContext.createAnalyser();
+              analyser.fftSize = 256;
+            }
+            
+            // Connect the sound to the gain node
+            somaFmSound.connect(gainNode);
+            
+            // Connect gain node to analyzer and then to destination
+            gainNode.connect(analyser);
+            gainNode.connect(audioContext.destination);
+              
+            // Create data array for analyzer
+            audioDataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            console.log("SOMA FM audio connected via THREE.js audio");
+          } catch (fallbackError) {
+            console.error("Fallback audio connection also failed:", fallbackError);
+          }
+        }
+      }).catch(error => {
+        console.error('Error playing SOMA FM audio:', error);
+        playButton.textContent = 'Play SOMA FM';
+        playButton.disabled = false;
+        playButton.style.backgroundColor = '#824323';
+      });
+    } else {
+      somaFmAudioElement.pause();
+      somaFmIsPlaying = false;
+      playButton.textContent = 'Play SOMA FM';
+      playButton.style.backgroundColor = '#9e552f';
+    }
+  });
+
+  // Station selection change handler
+  stationSelect.addEventListener('change', () => {
+    selectedStationIndex = parseInt(stationSelect.value);
+    const selected = somaStations[selectedStationIndex];
+
+    somaFmAudioElement.src = selected.stream;
+    somaFmAudioElement.load();
+    if (somaFmIsPlaying) {
+      somaFmAudioElement.play().catch(error => {
+        console.error('Error playing new station:', error);
+      });
+      playButton.textContent = 'Pause SOMA FM';
+      playButton.style.backgroundColor = '#dc3545';
+    }
+  });
+
+  // Volume slider event listener
+  volumeSlider.addEventListener('input', function() {
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().catch(e => console.error("Error resuming audio context:", e));
+    }
+
+    const volume = parseFloat(volumeSlider.value);
+    somaFmAudioElement.volume = volume;
+  });
+
+  // Prevent mousedown on slider from propagating to PointerLockControls
+  volumeSlider.addEventListener('mousedown', function(event) {
+    event.stopPropagation();
+  });
+
+  // Handle audio loading events
+  somaFmAudioElement.addEventListener('waiting', () => {
+    playButton.textContent = 'Loading...';
+    playButton.disabled = true;
+    playButton.style.backgroundColor = '#6c757d';
+    
+    // Add loading indicator if not already present
+    if (!playButton.querySelector('span')) {
+      const loadingIndicator = document.createElement('span');
+      loadingIndicator.textContent = ' ⟳';
+      loadingIndicator.style.display = 'inline-block';
+      loadingIndicator.style.animation = 'spin 1s linear infinite';
+      playButton.appendChild(loadingIndicator);
+    }
+  });
+
+  somaFmAudioElement.addEventListener('playing', () => {
+    playButton.textContent = 'Pause SOMA FM';
+    playButton.disabled = false;
+    playButton.style.backgroundColor = '#dc3545';
+  });
+
+  somaFmAudioElement.addEventListener('error', (e) => {
+    console.error('SOMA FM Audio error:', e);
+    playButton.textContent = 'Play SOMA FM';
+    playButton.disabled = false;
+    playButton.style.backgroundColor = '#9e552f';
+  });
 }
 
 // Setup the scene
@@ -647,35 +1081,160 @@ function addParticles() {
   const particleCount = 2000;
   const geometry = new THREE.BufferGeometry();
   const positions = new Float32Array(particleCount * 3);
+  const scales = new Float32Array(particleCount);
+  const offsets = new Float32Array(particleCount);
+  const hues = new Float32Array(particleCount);
+  const rotationSpeeds = new Float32Array(particleCount);
+  const lifetimes = new Float32Array(particleCount);
 
   for (let i = 0; i < particleCount; i++) {
-    const x = THREE.MathUtils.randFloatSpread(300);
-    const y = THREE.MathUtils.randFloat(0, 300);
-    const z = THREE.MathUtils.randFloatSpread(300);
+    // Create a wider spread of particles
+    const x = THREE.MathUtils.randFloatSpread(400);
+    const y = THREE.MathUtils.randFloat(0, 400);
+    const z = THREE.MathUtils.randFloatSpread(400);
     positions.set([x, y, z], i * 3);
+    
+    // Add random values for individual particle animation
+    scales[i] = 0.5 + Math.random() * 1.5; // Increased scale variation
+    offsets[i] = Math.random() * Math.PI * 2; // Random phase offset
+    hues[i] = Math.random(); // Random base hue
+    rotationSpeeds[i] = 0.5 + Math.random() * 1.5; // Random rotation speed multiplier
+    
+    // Set random lifetime between 0-10 seconds (in milliseconds)
+    // This creates a staggered effect where particles are at different stages of their lifecycle
+    lifetimes[i] = Math.random() * 10000;
   }
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+  geometry.setAttribute('offset', new THREE.BufferAttribute(offsets, 1));
+  geometry.setAttribute('hue', new THREE.BufferAttribute(hues, 1));
+  geometry.setAttribute('rotationSpeed', new THREE.BufferAttribute(rotationSpeeds, 1));
+  geometry.setAttribute('lifetime', new THREE.BufferAttribute(lifetimes, 1));
 
   const textureLoader = new THREE.TextureLoader();
   textureLoader.load('assets/images/dustball.png', (glowTexture) => {
     glowTexture.colorSpace = THREE.SRGBColorSpace;
     glowTexture.needsUpdate = true;
 
-    const material = new THREE.PointsMaterial({
-      map: glowTexture,
-      color: 0xffffff,
-      size: .1,
+    // Create custom shader material for individual particle control
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        particleTexture: { value: glowTexture },
+        time: { value: 0.0 },
+        pulse: { value: 0.0 },
+        enhancedPulse: { value: 0.0 },
+        baseSize: { value: 0.3 }, // Increased base size for better visibility
+        baseSaturation: { value: 1.0 },
+        baseLightness: { value: 0.5 },
+        particleLifetime: { value: 10000.0 } // 10 seconds in milliseconds
+      },
+      vertexShader: `
+        attribute float scale;
+        attribute float offset;
+        attribute float hue;
+        attribute float rotationSpeed;
+        attribute float lifetime;
+        
+        uniform float time;
+        uniform float pulse;
+        uniform float enhancedPulse;
+        uniform float baseSize;
+        uniform float particleLifetime;
+        
+        varying vec3 vColor;
+        varying float vAlpha;
+        
+        // Helper function for HSL to RGB conversion
+        float hue2rgb(float p, float q, float t) {
+          if (t < 0.0) t += 1.0;
+          if (t > 1.0) t -= 1.0;
+          if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+          if (t < 1.0/2.0) return q;
+          if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+          return p;
+        }
+        
+        // HSL to RGB conversion function
+        vec3 hslToRgb(float h, float s, float l) {
+          float r, g, b;
+          
+          if (s == 0.0) {
+            r = g = b = l; // achromatic
+          } else {
+            float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+            float p = 2.0 * l - q;
+            r = hue2rgb(p, q, h + 1.0/3.0);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1.0/3.0);
+          }
+          
+          return vec3(r, g, b);
+        }
+        
+        void main() {
+          // Calculate current lifetime of the particle
+          float currentLifetime = mod(lifetime + time * 1000.0, particleLifetime);
+          float lifeProgress = currentLifetime / particleLifetime;
+          
+          // Fade in/out based on lifetime
+          float fadeIn = smoothstep(0.0, 0.1, lifeProgress);
+          float fadeOut = 1.0 - smoothstep(0.8, 1.0, lifeProgress);
+          vAlpha = fadeIn * fadeOut;
+          
+          // Calculate individual particle animation based on audio and rotation speed
+          float individualPulse = enhancedPulse * (0.8 + 0.4 * sin(offset + time * 0.5 * rotationSpeed));
+          
+          // Set particle size based on its scale attribute, audio pulse, and lifetime
+          float sizeMultiplier = 1.0 + sin(lifeProgress * 3.14159 * 2.0) * 0.3; // Size oscillation
+          float size = baseSize * scale * (1.0 + individualPulse * 3.0) * sizeMultiplier;
+          
+          // Calculate color based on individual hue, audio pulse, and lifetime
+          float adjustedHue = mod(hue + pulse * 0.2 + time * 0.05 * rotationSpeed, 1.0);
+          float saturation = 0.8 + individualPulse * 0.2;
+          float lightness = 0.5 + individualPulse * 0.3;
+          vColor = hslToRgb(adjustedHue, saturation, lightness);
+          
+          // Calculate position with some drift based on lifetime and rotation speed
+          vec3 driftedPosition = position;
+          driftedPosition.x += sin(time * rotationSpeed + offset) * 5.0;
+          driftedPosition.y += cos(time * rotationSpeed * 0.7 + offset * 1.3) * 5.0;
+          driftedPosition.z += sin(time * rotationSpeed * 0.5 + offset * 0.9) * 5.0;
+          
+          // Project the position
+          vec4 mvPosition = modelViewMatrix * vec4(driftedPosition, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          
+          // Set the point size
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D particleTexture;
+        
+        varying vec3 vColor;
+        varying float vAlpha;
+        
+        void main() {
+          // Sample the texture
+          vec4 texColor = texture2D(particleTexture, gl_PointCoord);
+          
+          // Apply the varying color and alpha to the texture
+          gl_FragColor = vec4(vColor, vAlpha) * texColor;
+          
+          // Discard transparent pixels
+          if (gl_FragColor.a < 0.1) discard;
+        }
+      `,
       transparent: true,
-      alphaTest: 0.1,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      sizeAttenuation: true
+      vertexColors: true
     });
 
     particleSystem = new THREE.Points(geometry, material);
     scene.add(particleSystem);
-    console.log("✨ Glowing square particles initialized!");
+    console.log("✨ Glowing particles with individual audio reactivity initialized!");
   },
   undefined,
   (err) => {
@@ -1259,30 +1818,65 @@ function animate(time) {
   
   // Audio visualization
   if (particleSystem && analyser) {
-    analyser.getByteFrequencyData(audioDataArray);
+    try {
+      // Get audio data from the analyzer
+      analyser.getByteFrequencyData(audioDataArray);
 
-    let avg = 0;
-    for (let i = 0; i < audioDataArray.length; i++) {
-      avg += audioDataArray[i];
+      // Calculate average frequency value
+      let avg = 0;
+      let maxVal = 0;
+      for (let i = 0; i < audioDataArray.length; i++) {
+        avg += audioDataArray[i];
+        maxVal = Math.max(maxVal, audioDataArray[i]);
+      }
+      avg /= audioDataArray.length;
+      
+      // Add a constant base value to ensure some animation even with low audio
+      const baseValue = 10;
+      avg = avg + baseValue;
+      maxVal = Math.max(maxVal, baseValue);
+      
+      // Normalize to 0-1 range
+      const pulse = avg / 256;
+      
+      // Add more responsive scaling for low volume
+      const enhancedPulse = Math.pow(pulse, 0.5) * 2.0; // Square root to enhance low values
+      
+      // Always log actual audio data values for debugging
+      console.log("Audio data:", JSON.stringify({
+        avg: parseFloat(avg.toFixed(2)),
+        maxVal: maxVal,
+        pulse: parseFloat(pulse.toFixed(2)),
+        enhancedPulse: parseFloat(enhancedPulse.toFixed(2))
+      }));
+
+      // Update shader uniforms for individual particle animation
+      if (particleSystem.material.uniforms) {
+        particleSystem.material.uniforms.time.value = performance.now() * 0.001;
+        particleSystem.material.uniforms.pulse.value = pulse;
+        particleSystem.material.uniforms.enhancedPulse.value = enhancedPulse;
+      }
+      
+      // Apply a very subtle rotation to the entire system
+      // This is much less noticeable than before but adds some gentle movement
+      particleSystem.rotation.y += 0.00001;
+      
+      // Add some additional effects when SOMA FM is playing
+      if (somaFmIsPlaying) {
+        // Subtle position shift based on audio
+        particleSystem.position.y = Math.sin(performance.now() * 0.0005) * enhancedPulse;
+      }
+      
+      // Log particle count occasionally for debugging
+      if (Math.random() < 0.01) { // Log roughly once every 100 frames
+        console.log(`Active particles: ${particleCount}`);
+      }
+
+      // Ensure material updates are applied
+      particleSystem.material.needsUpdate = true;
+    } catch (error) {
+      console.error("Error in audio visualization:", error);
     }
-    avg /= audioDataArray.length;
-    const pulse = avg / 256;
-
-    // Only log in debug mode
-    if (DEBUG) {
-      console.log("Pulse:", pulse.toFixed(2), 
-                "Size:", particleSystem.material.size.toFixed(2), 
-                "Opacity:", particleSystem.material.opacity.toFixed(2));
-    }
-
-    particleSystem.material.size = .5 + pulse * 1.5;
-    particleSystem.material.opacity = .5 + pulse * 0.4;
-    particleSystem.material.color.setHSL(pulse, 1.0, 2.0);
-
-    particleSystem.rotation.y += 0.0005 + pulse * 0.003;
-    particleSystem.position.y = Math.sin(performance.now() * 0.001) * (0.5 + pulse * 0.5);
-
-    particleSystem.material.needsUpdate = true;
   }
 
   renderer.render(scene, camera);
@@ -1534,6 +2128,20 @@ function cleanup() {
   if (audioSource) {
     audioSource.stop();
     audioSource = null;
+  }
+  
+  // Stop SOMA FM if playing
+  if (somaFmAudioElement) {
+    somaFmAudioElement.pause();
+    somaFmAudioElement.src = '';
+    if (somaFmAudioElement.parentNode) {
+      somaFmAudioElement.parentNode.removeChild(somaFmAudioElement);
+    }
+  }
+  
+  // Remove SOMA FM controls
+  if (somaFmControlsContainer && somaFmControlsContainer.parentNode) {
+    somaFmControlsContainer.parentNode.removeChild(somaFmControlsContainer);
   }
   
   // Clean up interactive models
