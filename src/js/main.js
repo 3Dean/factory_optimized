@@ -340,16 +340,16 @@ function setupAudio() {
   }
   
   // Pre-load the audio file
-  const audioUrl = "assets/audio/IliaqueNebula.mp3";
-  console.log("Preloading audio from:", audioUrl);
+/*   const audioUrl = "assets/audio/IliaqueNebula.mp3";
+  console.log("Preloading audio from:", audioUrl); */
   
   // Create an audio element for direct playback as fallback
-  window.audioElement = new Audio(audioUrl);
+  /* window.audioElement = new Audio(audioUrl);
   window.audioElement.loop = true;
-  window.audioElement.preload = "auto";
+  window.audioElement.preload = "auto"; */
   
   // Also fetch as ArrayBuffer for WebAudio API
-  fetch(audioUrl)
+  /* fetch(audioUrl)
     .then((response) => response.arrayBuffer())
     .then((arrayBuffer) => {
       audioBuffer = arrayBuffer;
@@ -357,7 +357,7 @@ function setupAudio() {
     })
     .catch((error) => {
       console.error("Error loading audio file:", error);
-    });
+    }); */
 }
 
 function initializeAudioContext() {
@@ -465,10 +465,10 @@ function toggleAudio() {
         console.log("Using HTML Audio element as fallback");
         
         // Make sure we have the audio element
-        if (!window.audioElement) {
+        /* if (!window.audioElement) {
           window.audioElement = new Audio("assets/audio/IliaqueNebula.mp3");
           window.audioElement.loop = true;
-        }
+        } */
         
         // Set volume
         window.audioElement.volume = gainNode ? gainNode.gain.value : 0.7;
@@ -1868,9 +1868,9 @@ function animate(time) {
       }
       
       // Log particle count occasionally for debugging
-      if (Math.random() < 0.01) { // Log roughly once every 100 frames
+      /* if (Math.random() < 0.01) { // Log roughly once every 100 frames
         console.log(`Active particles: ${particleCount}`);
-      }
+      } */
 
       // Ensure material updates are applied
       particleSystem.material.needsUpdate = true;
@@ -1984,6 +1984,13 @@ function loadModels() {
       scale: new THREE.Vector3(1, 1, 1),
       rotation: new THREE.Euler(0, 0, 0),
     },
+    {
+      name: "microphone",
+      url: "assets/models/microphone.glb",
+      position: new THREE.Vector3(0, 0, 0),
+      scale: new THREE.Vector3(1, 1, 1),
+      rotation: new THREE.Euler(0, 0, 0),
+    },
   ];
   
   modelsList.forEach((modelInfo) => {
@@ -2032,7 +2039,7 @@ function loadModels() {
               // Enhance materials to work with environment lighting
               if (node.material) {
                 if (node.material.isMeshStandardMaterial) {
-                  node.material.envMapIntensity = 1;
+                  node.material.envMapIntensity = 1.0;
                   node.material.roughness = Math.max(0.2, node.material.roughness);
                   node.material.metalness = Math.min(0.8, node.material.metalness);
                   node.material.needsUpdate = true;
