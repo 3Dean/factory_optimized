@@ -208,6 +208,8 @@ async function loadFluffyTrees() {
   }
 }
 
+const UNAVAILABLE_LINK_PLACEHOLDER = null;
+
 // Define artworks with their URLs
 const artworks = [
   {
@@ -216,7 +218,7 @@ const artworks = [
     position: new THREE.Vector3(-20, 5.5, -33.2),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, 0, 0),
-    linkUrl: "https://nearhub.club/hLyuPmW/", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork02",
@@ -224,7 +226,7 @@ const artworks = [
     position: new THREE.Vector3(-31.19, 5.5, -33.2),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, 0, 0),
-    linkUrl: "https://nearhub.club/kcPYd6i/south-east-asian-hub", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork03",
@@ -232,7 +234,7 @@ const artworks = [
     position: new THREE.Vector3(-34.8, 5.5, -28.9),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
-    linkUrl: "https://nearhub.club/i2VFvT8/mutidao-amphitheater", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork04",
@@ -240,7 +242,7 @@ const artworks = [
     position: new THREE.Vector3(-34.8, 5.5, -21.58),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
-    linkUrl: "https://nearhub.club/S5oDAd5/", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork05",
@@ -248,7 +250,7 @@ const artworks = [
     position: new THREE.Vector3(-34.8, 5.5, -14.51),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
-    linkUrl: "https://nearhub.club/kGRfWy6/adam-4-artists", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork06",
@@ -256,7 +258,7 @@ const artworks = [
     position: new THREE.Vector3(-34.8, 5.5, -7.25),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
-    linkUrl: "https://nearhub.club/n8avADG/near-at-ethdenver-23", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork07",
@@ -264,7 +266,7 @@ const artworks = [
     position: new THREE.Vector3(-34.8, 5.5, 0.2),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
-    linkUrl: "https://nearhub.club/hoXFRGi/metaverseradio-studio", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork08",
@@ -272,7 +274,7 @@ const artworks = [
     position: new THREE.Vector3(-30.85, 5.5, 4.35),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI, 0),
-    linkUrl: "https://nearhub.club/jJQy3wn/collegelasalle-signature2024", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork09",
@@ -280,7 +282,7 @@ const artworks = [
     position: new THREE.Vector3(-20.25, 5.5, 4.35),
     scale: new THREE.Vector3(1, 1, 1),
     rotation: new THREE.Euler(0, Math.PI, 0),
-    linkUrl: "https://nearhub.club/oZcg4pC/thespians-hub", // URL to open when clicked
+    linkUrl: UNAVAILABLE_LINK_PLACEHOLDER,
   },
   {
     name: "artwork10",
@@ -530,29 +532,36 @@ function setupSomaFmRadio() {
   somaFmControlsContainer.style.zIndex = '1000';
   somaFmControlsContainer.style.display = 'flex';
   somaFmControlsContainer.style.alignItems = 'center';
-  somaFmControlsContainer.style.gap = '10px';
+  somaFmControlsContainer.style.gap = '12px';
   document.body.appendChild(somaFmControlsContainer);
 
   // Create play button
   const playButton = document.createElement('button');
   playButton.textContent = 'Play SOMA FM';
   playButton.style.padding = '8px 16px';
+  playButton.style.height = '36px';
   playButton.style.backgroundColor = '#9e552f';
   playButton.style.color = 'white';
   playButton.style.border = 'none';
   playButton.style.borderRadius = '4px';
   playButton.style.cursor = 'pointer';
   playButton.style.fontSize = '14px';
+  playButton.style.display = 'flex';
+  playButton.style.alignItems = 'center';
+  playButton.style.justifyContent = 'center';
+  playButton.style.margin = '0';
   somaFmControlsContainer.appendChild(playButton);
 
   // Dropdown to select station
   const stationSelect = document.createElement('select');
-  stationSelect.style.padding = '6px';
+  stationSelect.style.padding = '6px 10px';
+  stationSelect.style.height = '36px';
   stationSelect.style.borderRadius = '4px';
   stationSelect.style.cursor = 'pointer';
   stationSelect.style.fontSize = '12px';
   stationSelect.style.backgroundColor = '#333';
   stationSelect.style.color = '#fff';
+  stationSelect.style.margin = '0';
 
   somaStations.forEach((station, index) => {
     const option = document.createElement('option');
@@ -562,24 +571,45 @@ function setupSomaFmRadio() {
   });
   somaFmControlsContainer.appendChild(stationSelect);
 
-  // Create volume slider
-  const volumeSlider = document.createElement('input');
-  volumeSlider.type = 'range';
-  volumeSlider.min = '0';
-  volumeSlider.max = '1';
-  volumeSlider.step = '0.1';
-  volumeSlider.value = '0.5';
-  volumeSlider.style.width = '100px';
-  volumeSlider.style.cursor = 'pointer';
-  volumeSlider.style.pointerEvents = 'auto';
-  volumeSlider.id = 'soma-volume-slider';
-  volumeSlider.style.webkitAppearance = 'none';
-  volumeSlider.style.appearance = 'none';
-  volumeSlider.style.height = '8px';
-  volumeSlider.style.borderRadius = '4px';
-  volumeSlider.style.background = '#444';
-  volumeSlider.style.outline = 'none';
-  somaFmControlsContainer.appendChild(volumeSlider);
+  const somaFmLogoLink = document.createElement('a');
+  somaFmLogoLink.href = 'https://somafm.com/';
+  somaFmLogoLink.target = '_blank';
+  somaFmLogoLink.rel = 'noopener noreferrer';
+  somaFmLogoLink.style.display = 'block';
+  somaFmLogoLink.style.height = '36px';
+  somaFmLogoLink.style.margin = '0';
+
+  const somaFmLogo = document.createElement('img');
+  somaFmLogo.src = '/assets/images/somafmbutton.svg';
+  somaFmLogo.alt = 'SOMA FM';
+  somaFmLogo.style.width = '100px';
+  somaFmLogo.style.height = '36px';
+  somaFmLogo.style.objectFit = 'contain';
+  somaFmLogo.style.display = 'block';
+  somaFmLogo.style.margin = '0';
+  somaFmLogoLink.appendChild(somaFmLogo);
+
+  let volumeSlider = null;
+  if (!isMobile) {
+    volumeSlider = document.createElement('input');
+    volumeSlider.type = 'range';
+    volumeSlider.min = '0';
+    volumeSlider.max = '1';
+    volumeSlider.step = '0.1';
+    volumeSlider.value = '0.5';
+    volumeSlider.style.width = '100px';
+    volumeSlider.style.cursor = 'pointer';
+    volumeSlider.style.pointerEvents = 'auto';
+    volumeSlider.id = 'soma-volume-slider';
+    volumeSlider.style.webkitAppearance = 'none';
+    volumeSlider.style.appearance = 'none';
+    volumeSlider.style.height = '8px';
+    volumeSlider.style.borderRadius = '4px';
+    volumeSlider.style.background = '#444';
+    volumeSlider.style.outline = 'none';
+    somaFmControlsContainer.appendChild(volumeSlider);
+  }
+  somaFmControlsContainer.appendChild(somaFmLogoLink);
 
   // Create HTML audio element for streaming
   somaFmAudioElement = document.createElement('audio');
@@ -654,7 +684,7 @@ function setupSomaFmRadio() {
       // Play when ready
       somaFmAudioElement.play().then(() => {
         somaFmIsPlaying = true;
-        playButton.textContent = 'Pause SOMA FM';
+        playButton.textContent = 'Pause Music';
         playButton.disabled = false;
         playButton.style.backgroundColor = '#dc3545'; // Red for pause
         
@@ -788,19 +818,21 @@ function setupSomaFmRadio() {
   });
 
   // Volume slider event listener
-  volumeSlider.addEventListener('input', function() {
-    if (audioContext && audioContext.state === 'suspended') {
-      audioContext.resume().catch(e => console.error("Error resuming audio context:", e));
-    }
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', function() {
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().catch(e => console.error("Error resuming audio context:", e));
+      }
 
-    const volume = parseFloat(volumeSlider.value);
-    somaFmAudioElement.volume = volume;
-  });
+      const volume = parseFloat(volumeSlider.value);
+      somaFmAudioElement.volume = volume;
+    });
 
-  // Prevent mousedown on slider from propagating to PointerLockControls
-  volumeSlider.addEventListener('mousedown', function(event) {
-    event.stopPropagation();
-  });
+    // Prevent mousedown on slider from propagating to PointerLockControls
+    volumeSlider.addEventListener('mousedown', function(event) {
+      event.stopPropagation();
+    });
+  }
 
   // Handle audio loading events
   somaFmAudioElement.addEventListener('waiting', () => {
@@ -1714,7 +1746,7 @@ function updateDebugInfo() {
     interactiveModels.forEach((model, index) => {
       content += `<b>${index + 1}. ${model.userData.name || 'Unnamed'}</b><br>`;
       content += `Position: (${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)}, ${model.position.z.toFixed(2)})<br>`;
-      content += `URL: ${model.userData.linkUrl}<br>`;
+      content += `URL: ${model.userData.linkUrl || "Placeholder pending replacement"}<br>`;
       
       // Count meshes
       let meshCount = 0;
@@ -1843,12 +1875,12 @@ function animate(time) {
       const enhancedPulse = Math.pow(pulse, 0.5) * 2.0; // Square root to enhance low values
       
       // Always log actual audio data values for debugging
-      console.log("Audio data:", JSON.stringify({
+      /* console.log("Audio data:", JSON.stringify({
         avg: parseFloat(avg.toFixed(2)),
         maxVal: maxVal,
         pulse: parseFloat(pulse.toFixed(2)),
         enhancedPulse: parseFloat(enhancedPulse.toFixed(2))
-      }));
+      })); */
 
       // Update shader uniforms for individual particle animation
       if (particleSystem.material.uniforms) {
@@ -2086,8 +2118,9 @@ function loadModels() {
         scene.add(model);
         console.log(`Model "${modelInfo.name}" loaded`);
         
+        // Player Initial Position
         if (modelInfo.name === "navmesh" && player) {
-          placePlayerOnNavmesh(new THREE.Vector3(30, 10, 0));
+          placePlayerOnNavmesh(new THREE.Vector3(0, 0, -21.55));
         }
       },
       function (xhr) {

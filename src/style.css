@@ -224,6 +224,9 @@ canvas {
   display: none;
 }
 @media (max-width: 768px) {
+  :root {
+    --mobile-control-clearance: calc(env(safe-area-inset-bottom, 0px) + 112px);
+  }
   #controls, #audio-controls, #crosshair {
     display: none;
   }
@@ -266,18 +269,18 @@ canvas {
     transform: scale(0.95);
   }
   #left-thumbstick {
-    bottom: 30px;
+    bottom: var(--mobile-control-clearance);
     left: 20px;
     display: flex;
   }
   #right-thumbstick {
-    bottom: 30px;
+    bottom: var(--mobile-control-clearance);
     right: 20px;
     display: flex;
   }
   #jump-button {
     position: absolute;
-    bottom: 50px;
+    bottom: calc(var(--mobile-control-clearance) + 20px);
     left: 50%;
     transform: translateX(-50%);
     width: 80px;
